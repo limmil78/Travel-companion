@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Travel Companion & Checklist</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .drag-over { border: 2px dashed #6366f1 !important; opacity: 0.8; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-20 md:pb-8 select-none">
+
+    <!-- Top Header -->
+    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-plane-departure text-2xl text-amber-300"></i>
+                <h1 id="header-trip-title" class="text-lg md:text-xl font-bold tracking-tight truncate max-w-[200px] sm:max-w-md">My Travel Companion</h1>
+            </div>
+            <div class="flex items-center gap-2 text-xs md:text-sm">
+                <button onclick="exportData()" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm font-medium">
+                    <i class="fa-solid fa-download"></i> <span class="hidden sm:inline">Export</span>
+                </button>
+                <label class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 transition shadow-sm font-medium">
+                    <i class="fa-solid fa-upload"></i> <span class="hidden sm:inline">Import</span>
+                    <input type="file" id="import-file" class="hidden" onchange="importData(event)" accept=".json">
+                </label>
+                <button onclick="promptResetData()" class="bg-rose-600 hover:bg-rose-500 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm font-medium">
+                    <i class="fa-solid fa-rotate-left"></i> <span class="hidden sm:inline">Reset</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Navigation Bar (Desktop & Tablet) -->
+        <div class="bg-indigo-800 border-t border-indigo-600/50 overflow-x-auto no-scrollbar">
+            <div id="desktop-tab-container" class="max-w-7xl mx-auto px-4 flex space-x-1 py-1">
+                <!-- Dynamic Reorderable Tabs Rendered via JS -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation Bar (Sticky Bottom) -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 text-white border-t border-slate-800 z-50 overflow-x-auto no-scrollbar">
+        <div id="mobile-tab-container" class="flex items-center justify-between min-w-max px-2 py-1">
+            <!-- Dynamic Mobile Tabs Rendered via JS -->
+        </div>
+    </nav>
+
+    <!-- Main Workspace Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+
+        <!-- TAB 1: OVERVIEW & DESTINATIONS -->
+        <section id="tab-overview" class="tab-content space-y-6">
+            <!-- Profile Card -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-indigo-600"></i> Trip Profile & Tab Settings
+                    </h2>
+                    <div class="flex gap-2">
+                        <button onclick="openRenameTabsModal()" class="bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs px-3 py-1.5 rounded-lg font-medium transition border border-slate-300">
+                            <i class="fa-solid fa-pen-to-square mr-1"></i> Rename Tabs
+                        </button>
+                        <button onclick="saveProfileSettings()" class="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-indigo-700 font-medium transition">
+                            <i class="fa-solid fa-floppy-disk mr-1"></i> Save Settings
+                        </button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs font-medium">
+                    <div>
+                        <label class="text-slate-500 block mb-1">Trip Name</label>
+                        <input type="text" id="prof-title" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-slate-500 block mb-1">Travel Dates</label>
+                        <input type="text" id="prof-dates" placeholder="e.g. Oct 10 - Oct 24, 2026" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-slate-500 block mb-1">Base Currency</label>
+                        <select id="prof-currency" onchange="updateBaseCurrency(this.value)" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+                    </div>
+                    <div>
+                        <label class="text-slate-500 block mb-1">Overall Budget (<span class="base-curr-label">SGD</span>)</label>
+                        <input type="number" id="prof-budget" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Budget Progress Card -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-sm font-semibold text-slate-700">Overall Travel Budget Spending</h3>
+                    <span id="budget-summary-text" class="text-xs font-bold text-indigo-600">SGD 0 / SGD 0</span>
+                </div>
+                <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+                    <div id="budget-bar" class="bg-indigo-600 h-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Destinations Grid -->
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-map-location-dot text-indigo-600"></i> Destinations & Live Weather
+                    </h2>
+                    <button onclick="openAddDestinationModal()" class="bg-indigo-600 text-white text-xs px-3.5 py-1.5 rounded-lg hover:bg-indigo-700 font-medium transition">
+                        <i class="fa-solid fa-plus mr-1"></i> Add Destination
+                    </button>
+                </div>
+                <div id="destinations-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Cards injected dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: ACTION CHECKLISTS -->
+        <section id="tab-checklists" class="tab-content hidden space-y-6">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-clipboard-check text-indigo-600"></i> Pre-Holiday & Departure Action Items
+                        </h2>
+                        <p class="text-xs text-slate-500">Track critical arrival cards, insurance policies, SIM roaming, and prescriptions.</p>
+                    </div>
+                    <button onclick="openAddTaskModal()" class="bg-indigo-600 text-white text-xs px-3.5 py-1.5 rounded-lg hover:bg-indigo-700 font-medium transition">
+                        <i class="fa-solid fa-plus mr-1"></i> Add Task
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Pre-Holiday Checklist</h3>
+                        <div id="pre-holiday-tasks" class="space-y-2"></div>
+                    </div>
+                    <hr class="border-slate-100">
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Day of Departure Checklist</h3>
+                        <div id="departure-tasks" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: TRANSPORT & FLIGHTS -->
+        <section id="tab-transport" class="tab-content hidden space-y-6">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-plane text-indigo-600"></i> Flights & Trains Multi-Leg Log
+                        </h2>
+                        <p class="text-xs text-slate-500">Log terminal, baggage allowances, seat numbers, gate, and booking reference details.</p>
+                    </div>
+                    <button onclick="openAddTransportModal()" class="bg-indigo-600 text-white text-xs px-3.5 py-1.5 rounded-lg hover:bg-indigo-700 font-medium transition">
+                        <i class="fa-solid fa-plus mr-1"></i> Add Segment
+                    </button>
+                </div>
+
+                <div id="transport-list" class="space-y-4">
+                    <!-- Dynamic transport elements -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: ACCOMMODATIONS -->
+        <section id="tab-accommodations" class="tab-content hidden space-y-6">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-hotel text-indigo-600"></i> Stays & Accommodations
+                        </h2>
+                        <p class="text-xs text-slate-500">Access codes, booking refs, check-in/out dates, and direct map links.</p>
+                    </div>
+                    <button onclick="openAddStayModal()" class="bg-indigo-600 text-white text-xs px-3.5 py-1.5 rounded-lg hover:bg-indigo-700 font-medium transition">
+                        <i class="fa-solid fa-plus mr-1"></i> Add Accommodation
+                    </button>
+                </div>
+
+                <div id="stays-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dynamic Stays elements -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 5: PACKING CHECKLIST (ENHANCED) -->
+        <section id="tab-packing" class="tab-content hidden space-y-6">
+            <!-- Overall Packing Summary -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-wrap justify-between items-center gap-3 mb-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-suitcase text-indigo-600"></i> Packing Checklist & Manager
+                        </h2>
+                        <p class="text-xs text-slate-500">Organize belongings by category, track priorities, search items, and load seasonal presets.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button onclick="expandAllPacking(true)" class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-200 transition">Expand All</button>
+                        <button onclick="expandAllPacking(false)" class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-200 transition">Collapse All</button>
+                        <button onclick="applyPresetPrompt()" class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1.5 rounded-lg border border-amber-300 hover:bg-amber-200 font-medium transition"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Presets</button>
+                        <button onclick="openManagePackingCategoriesModal()" class="bg-slate-700 text-white text-xs px-2.5 py-1.5 rounded-lg hover:bg-slate-800 font-medium transition"><i class="fa-solid fa-folder-plus mr-1"></i> Categories</button>
+                        <button onclick="openAddPackingItemModal()" class="bg-indigo-600 text-white text-xs px-3.5 py-1.5 rounded-lg hover:bg-indigo-700 font-medium transition"><i class="fa-solid fa-plus mr-1"></i> Add Item</button>
+                    </div>
+                </div>
+
+                <!-- Progress Bar & Quick Search Filter -->
+                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-bold text-slate-700 flex items-center gap-1.5">
+                            <i class="fa-solid fa-chart-pie text-indigo-600"></i> Packing Completion Status
+                        </span>
+                        <span id="packing-progress-stats" class="font-bold text-indigo-600">0 / 0 Items Packed (0%)</span>
+                    </div>
+                    <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+                        <div id="packing-progress-bar" class="bg-emerald-500 h-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 pt-1">
+                        <div class="flex-1 min-w-[200px]">
+                            <input type="text" id="packing-search-input" onkeyup="renderPacking()" placeholder="🔍 Search packing items..." class="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                        </div>
+                        <select id="packing-priority-filter" onchange="renderPacking()" class="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs outline-none bg-white font-medium text-slate-700">
+                            <option value="ALL">All Priorities</option>
+                            <option value="High">High Priority Only</option>
+                            <option value="Medium">Medium Priority</option>
+                            <option value="Low">Low Priority</option>
+                        </select>
+                        <select id="packing-status-filter" onchange="renderPacking()" class="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs outline-none bg-white font-medium text-slate-700">
+                            <option value="ALL">All Items</option>
+                            <option value="UNPACKED">Unpacked Only</option>
+                            <option value="PACKED">Packed Only</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="packing-categories-container" class="space-y-4">
+                <!-- Rendered Packing Categories -->
+            </div>
+        </section>
+
+        <!-- TAB 6: EXPENSE LOG -->
+        <section id="tab-expenses" class="tab-content hidden space-y-6">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-receipt text-indigo-600"></i> Expense Log & Analytics
+                        </h2>
+                        <p class="text-xs text-slate-500">Log multi-currency expenses and automatically convert them into your base currency.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="openManageExpenseCategoriesModal()" class="bg-slate-700 text-white text-xs px-2.5 py-1.5 rounded-lg hover:bg-slate-800 font-medium"><i class="fa-solid fa-folder-plus mr-1"></i> Categories</button>
+                        <button onclick="openAddExpenseModal()" class="bg-indigo-600 text-white text-xs px-3.5 py-1.5 rounded-lg hover:bg-indigo-700 font-medium"><i class="fa-solid fa-plus mr-1"></i> Log Expense</button>
+                    </div>
+                </div>
+
+                <!-- Filters & Total Header -->
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-wrap justify-between items-center gap-3 mb-4 text-xs">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="font-semibold text-slate-600">Filter:</span>
+                        <select id="exp-filter-cat" onchange="renderExpenses()" class="border border-slate-300 rounded-lg px-2.5 py-1 outline-none">
+                            <option value="ALL">All Categories</option>
+                        </select>
+                        <input type="date" id="exp-filter-date" onchange="renderExpenses()" class="border border-slate-300 rounded-lg px-2.5 py-1 outline-none">
+                        <button onclick="clearExpenseFilters()" class="text-indigo-600 hover:underline font-medium">Clear</button>
+                    </div>
+                    <div class="text-sm font-bold text-slate-700">
+                        Filtered Total: <span id="filtered-expense-total" class="text-indigo-600">SGD 0.00</span>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left text-slate-600">
+                        <thead class="bg-slate-100 text-slate-700 uppercase font-semibold border-b border-slate-200">
+                            <tr>
+                                <th class="p-2.5">Date</th>
+                                <th class="p-2.5">Category</th>
+                                <th class="p-2.5">Description</th>
+                                <th class="p-2.5">Amount (FX)</th>
+                                <th class="p-2.5">Converted (<span class="base-curr-label">SGD</span>)</th>
+                                <th class="p-2.5 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expense-table-body" class="divide-y divide-slate-100">
+                            <!-- Injected Expenses -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 7: FX & LIVE RATES -->
+        <section id="tab-fx" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Live Rates & Overrides -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-coins text-indigo-600"></i> Live FX & Override Controls
+                        </h2>
+                        <button onclick="fetchLiveRates()" class="bg-indigo-600 text-white text-xs px-2.5 py-1.5 rounded-lg hover:bg-indigo-700 font-medium">
+                            <i class="fa-solid fa-rotate mr-1"></i> Refresh Rates
+                        </button>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-4">Base Currency: <strong class="base-curr-label text-indigo-600">SGD</strong></p>
+                    <div id="fx-rates-list" class="space-y-3 max-h-96 overflow-y-auto pr-1">
+                        <!-- FX Items -->
+                    </div>
+                </div>
+
+                <!-- FX Cheat Sheet -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2 mb-4">
+                        <i class="fa-solid fa-calculator text-indigo-600"></i> FX Quick-Reference Cheat Sheet
+                    </h2>
+                    <div class="grid grid-cols-2 gap-3 text-xs mb-4">
+                        <div>
+                            <label class="text-slate-500 block mb-1">Target Currency</label>
+                            <select id="cs-target-curr" onchange="renderCheatSheet()" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></select>
+                        </div>
+                        <div>
+                            <label class="text-slate-500 block mb-1">Step Increments</label>
+                            <input type="number" id="cs-step" value="10" onchange="renderCheatSheet()" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                        </div>
+                    </div>
+                    <div id="cheat-sheet-table" class="border rounded-lg overflow-hidden">
+                        <!-- Cheat sheet table injected here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Shared Dynamic Modal -->
+    <div id="app-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-indigo-700 text-white px-4 py-3 flex justify-between items-center">
+                <h3 id="modal-title" class="font-bold text-sm">Modal Title</h3>
+                <button onclick="closeModal()" class="text-white hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="modal-body" class="p-4 overflow-y-auto space-y-4 text-xs">
+                <!-- Modal Form Content -->
+            </div>
+            <div id="modal-footer" class="bg-slate-50 px-4 py-3 border-t flex justify-end gap-2">
+                <button onclick="closeModal()" class="px-3 py-1.5 border rounded-lg text-slate-600 hover:bg-slate-100 text-xs font-medium">Cancel</button>
+                <button id="modal-submit-btn" class="px-3.5 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-xs font-medium transition">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        const CURRENCIES = ["SGD", "USD", "EUR", "JPY", "GBP", "AUD", "CAD", "CHF", "CNY", "HKD", "NZD", "SEK", "KRW", "NOK", "MXN", "INR", "BRL", "ZAR", "THB", "IDR", "MYR", "PHP", "VND", "TRY", "AED", "SAR", "TWD"];
+
+        const DEFAULT_TAB_ORDER = [
+            { id: "overview", name: "Overview", icon: "fa-earth-americas" },
+            { id: "checklists", name: "Action Checklists", icon: "fa-clipboard-check" },
+            { id: "transport", name: "Transport & Flights", icon: "fa-plane" },
+            { id: "accommodations", name: "Accommodations", icon: "fa-hotel" },
+            { id: "packing", name: "Packing List", icon: "fa-suitcase" },
+            { id: "expenses", name: "Expense Log", icon: "fa-receipt" },
+            { id: "fx", name: "FX & Rates", icon: "fa-coins" }
+        ];
+
+        let appData = {
+            tabOrder: JSON.parse(JSON.stringify(DEFAULT_TAB_ORDER)),
+            activeTab: "overview",
+            profile: {
+                title: "Japan & Asia Adventure 2026",
+                dates: "Oct 12 - Oct 28, 2026",
+                baseCurrency: "SGD",
+                overallBudget: 5000
+            },
+            destinations: [
+                { id: "d1", name: "Tokyo", country: "Japan", lat: 35.6762, lon: 139.6503, query: "Tokyo, Japan" },
+                { id: "d2", name: "Kyoto", country: "Japan", lat: 35.0116, lon: 135.7681, query: "Kyoto, Japan" }
+            ],
+            checklists: [
+                { id: "c1", type: "pre", text: "Submit Visit Japan Web / SG Arrival Card", done: false, remark: "Complete 3 days prior" },
+                { id: "c2", type: "pre", text: "Buy Comprehensive Travel Insurance", done: true, remark: "Policy #883921" },
+                { id: "c3", type: "dep", text: "Activate Data Roaming / Pick up eSIM", done: false, remark: "Airalo eSIM activated" },
+                { id: "c4", type: "dep", text: "Pack Prescription Medicines in Carry-on", done: false, remark: "Original packaging" }
+            ],
+            transport: [
+                {
+                    id: "t1",
+                    type: "Flight",
+                    carrier: "Singapore Airlines SQ638",
+                    depStation: "Singapore Changi (SIN)",
+                    arrStation: "Tokyo Narita (NRT)",
+                    depTime: "2026-10-12T23:55",
+                    arrTime: "2026-10-13T08:00",
+                    terminal: "T3",
+                    gate: "B4",
+                    seat: "14A",
+                    ref: "SQ-881293",
+                    carryOn: "7kg",
+                    checkedBag: "25kg",
+                    transit: "Direct Flight",
+                    remarks: "In-flight meals included"
+                }
+            ],
+            stays: [
+                {
+                    id: "s1",
+                    name: "Shinjuku Granbell Hotel",
+                    checkIn: "2026-10-13",
+                    checkOut: "2026-10-18",
+                    ref: "BOOK-99120",
+                    doorCode: "7712#",
+                    address: "Kabukicho 2-14-5, Shinjuku, Tokyo",
+                    remarks: "Luggage storage available before check-in"
+                }
+            ],
+            packingCategories: ["Documents & Money", "Electronics", "Clothing", "Toiletries & Meds", "Accessories & Gear"],
+            packingItems: [
+                { id: "p1", category: "Documents & Money", name: "Passport & Visa", priority: "High", season: "All", qty: 1, done: true },
+                { id: "p2", category: "Electronics", name: "Universal Travel Adapter", priority: "High", season: "All", qty: 1, done: true },
+                { id: "p3", category: "Documents & Money", name: "Multi-Currency Card (YouTrip/Revolut)", priority: "High", season: "All", qty: 2, done: true },
+                { id: "p4", category: "Electronics", name: "10,000mAh Power Bank", priority: "High", season: "All", qty: 1, done: false },
+                { id: "p5", category: "Clothing", name: "Comfortable Walking Shoes", priority: "High", season: "All", qty: 1, done: false },
+                { id: "p6", category: "Toiletries & Meds", name: "Personal First Aid & Meds", priority: "Medium", season: "All", qty: 1, done: false }
+            ],
+            expenseCategories: ["Food & Dining", "Transport", "Accommodation", "Activities", "Shopping", "Misc"],
+            expenses: [
+                { id: "e1", date: "2026-10-13", category: "Food & Dining", desc: "Ramen Dinner Shinjuku", amount: 1800, curr: "JPY" }
+            ],
+            fxRates: {
+                "JPY": 0.0089,
+                "USD": 1.34,
+                "EUR": 1.45,
+                "GBP": 1.70
+            },
+            fxOverrides: {}
+        };
+
+        let draggedTabIndex = null;
+
+        function safeLocalStorageGet(key) {
+            try {
+                return localStorage.getItem(key);
+            } catch (e) {
+                console.warn("Storage access restricted:", e);
+                return null;
+            }
+        }
+
+        function safeLocalStorageSet(key, val) {
+            try {
+                localStorage.setItem(key, val);
+            } catch (e) {
+                console.warn("Could not save to local storage:", e);
+            }
+        }
+
+        function loadAppData() {
+            try {
+                const saved = safeLocalStorageGet("travel_companion_app_data");
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    appData = { ...appData, ...parsed };
+                    if (!appData.tabOrder || !Array.isArray(appData.tabOrder) || appData.tabOrder.length === 0) {
+                        appData.tabOrder = JSON.parse(JSON.stringify(DEFAULT_TAB_ORDER));
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not parse saved storage data:", e);
+            }
+            saveAppData();
+        }
+
+        function saveAppData() {
+            safeLocalStorageSet("travel_companion_app_data", JSON.stringify(appData));
+        }
+
+        function renderTabs() {
+            const desktopContainer = document.getElementById("desktop-tab-container");
+            const mobileContainer = document.getElementById("mobile-tab-container");
+            if (!desktopContainer || !mobileContainer) return;
+
+            desktopContainer.innerHTML = "";
+            mobileContainer.innerHTML = "";
+
+            appData.tabOrder.forEach((tab, index) => {
+                const isActive = appData.activeTab === tab.id;
+
+                // --- DESKTOP TAB ITEM ---
+                const dTab = document.createElement("div");
+                dTab.className = `flex items-center text-xs font-medium rounded-t-lg border-b-2 transition group ${
+                    isActive ? "bg-white text-indigo-700 border-amber-400 font-semibold" : "text-indigo-100 hover:bg-indigo-700/50 border-transparent"
+                }`;
+                dTab.draggable = true;
+                dTab.dataset.index = index;
+
+                // Drag & Drop
+                dTab.addEventListener("dragstart", (e) => {
+                    draggedTabIndex = index;
+                    e.dataTransfer.effectAllowed = "move";
+                });
+                dTab.addEventListener("dragover", (e) => {
+                    e.preventDefault();
+                    dTab.classList.add("drag-over");
+                });
+                dTab.addEventListener("dragleave", () => {
+                    dTab.classList.remove("drag-over");
+                });
+                dTab.addEventListener("drop", (e) => {
+                    e.preventDefault();
+                    dTab.classList.remove("drag-over");
+                    if (draggedTabIndex !== null && draggedTabIndex !== index) {
+                        moveTab(draggedTabIndex, index);
+                    }
+                });
+
+                dTab.innerHTML = `
+                    <div class="flex items-center gap-1.5 px-3 py-2 cursor-pointer" onclick="switchTab('${tab.id}')">
+                        <i class="fa-solid ${tab.icon}"></i>
+                        <span>${tab.name}</span>
+                    </div>
+                    <div class="flex items-center pr-2 opacity-60 group-hover:opacity-100 gap-0.5">
+                        ${index > 0 ? `<button onclick="shiftTabLeft(event, ${index})" title="Move Left" class="hover:text-amber-300 p-0.5"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>` : '<span class="w-2.5"></span>'}
+                        ${index < appData.tabOrder.length - 1 ? `<button onclick="shiftTabRight(event, ${index})" title="Move Right" class="hover:text-amber-300 p-0.5"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>` : '<span class="w-2.5"></span>'}
+                    </div>
+                `;
+                desktopContainer.appendChild(dTab);
+
+                // --- MOBILE TAB ITEM ---
+                const mTab = document.createElement("div");
+                mTab.className = `flex flex-col items-center justify-center py-1 px-2 text-[10px] min-w-[70px] relative ${
+                    isActive ? "text-amber-400 font-bold border-b-2 border-amber-400" : "text-slate-400"
+                }`;
+                mTab.innerHTML = `
+                    <button onclick="switchTab('${tab.id}')" class="flex flex-col items-center w-full">
+                        <i class="fa-solid ${tab.icon} text-sm mb-0.5"></i>
+                        <span class="truncate max-w-[65px]">${tab.name}</span>
+                    </button>
+                    <div class="flex gap-2 mt-0.5 text-[9px] text-slate-500">
+                        ${index > 0 ? `<span onclick="shiftTabLeft(event, ${index})" class="cursor-pointer hover:text-white"><i class="fa-solid fa-caret-left"></i></span>` : ''}
+                        ${index < appData.tabOrder.length - 1 ? `<span onclick="shiftTabRight(event, ${index})" class="cursor-pointer hover:text-white"><i class="fa-solid fa-caret-right"></i></span>` : ''}
+                    </div>
+                `;
+                mobileContainer.appendChild(mTab);
+            });
+        }
+
+        function shiftTabLeft(e, index) {
+            e.stopPropagation();
+            if (index > 0) moveTab(index, index - 1);
+        }
+
+        function shiftTabRight(e, index) {
+            e.stopPropagation();
+            if (index < appData.tabOrder.length - 1) moveTab(index, index + 1);
+        }
+
+        function moveTab(fromIdx, toIdx) {
+            const item = appData.tabOrder.splice(fromIdx, 1)[0];
+            appData.tabOrder.splice(toIdx, 0, item);
+            saveAppData();
+            renderTabs();
+        }
+
+        function switchTab(tabId) {
+            const validTab = appData.tabOrder.find(t => t.id === tabId);
+            appData.activeTab = validTab ? tabId : "overview";
+            saveAppData();
+            
+            document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+            const target = document.getElementById(`tab-${appData.activeTab}`);
+            if (target) {
+                target.classList.remove("hidden");
+            } else {
+                const fallback = document.getElementById("tab-overview");
+                if (fallback) fallback.classList.remove("hidden");
+            }
+            renderTabs();
+        }
+
+        function openRenameTabsModal() {
+            let fieldsHtml = appData.tabOrder.map((t, idx) => `
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid ${t.icon} text-indigo-600 w-5"></i>
+                    <input type="text" id="m-tabname-${t.id}" value="${t.name}" class="flex-1 border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none text-xs">
+                </div>
+            `).join('');
+
+            openModal("Rename Navigation Tabs", `
+                <p class="text-slate-500 text-xs mb-3">Customize the display titles for all tabs on desktop and mobile menus:</p>
+                <div class="space-y-2">
+                    ${fieldsHtml}
+                </div>
+            `, () => {
+                appData.tabOrder.forEach(t => {
+                    const inputEl = document.getElementById(`m-tabname-${t.id}`);
+                    if (inputEl && inputEl.value.trim()) {
+                        t.name = inputEl.value.trim();
+                    }
+                });
+                saveAppData();
+                renderTabs();
+                closeModal();
+                showAlertModal("Tabs Updated", "Navigation tab names have been saved.");
+            });
+        }
+
+        function initCurrencies() {
+            const selects = ["prof-currency", "cs-target-curr"];
+            selects.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.innerHTML = CURRENCIES.map(c => `<option value="${c}">${c}</option>`).join("");
+            });
+            const profCurr = document.getElementById("prof-currency");
+            if (profCurr) profCurr.value = appData.profile.baseCurrency;
+            updateBaseLabels();
+        }
+
+        function updateBaseLabels() {
+            document.querySelectorAll(".base-curr-label").forEach(el => el.innerText = appData.profile.baseCurrency);
+        }
+
+        function updateBaseCurrency(val) {
+            appData.profile.baseCurrency = val;
+            saveAppData();
+            updateBaseLabels();
+            renderExpenses();
+            renderCheatSheet();
+            calculateBudgetProgress();
+        }
+
+        function saveProfileSettings() {
+            appData.profile.title = document.getElementById("prof-title").value;
+            appData.profile.dates = document.getElementById("prof-dates").value;
+            appData.profile.overallBudget = parseFloat(document.getElementById("prof-budget").value) || 0;
+            saveAppData();
+            document.getElementById("header-trip-title").innerText = appData.profile.title;
+            calculateBudgetProgress();
+            showAlertModal("Profile Updated", "Your trip profile settings have been saved.");
+        }
+
+        function renderDestinations() {
+            const grid = document.getElementById("destinations-grid");
+            if (!grid) return;
+            grid.innerHTML = "";
+            appData.destinations.forEach(d => {
+                const card = document.createElement("div");
+                card.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-sm">${d.name}</h3>
+                                <p class="text-xs text-slate-500">${d.country}</p>
+                            </div>
+                            <div class="flex gap-1">
+                                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.query)}" target="_blank" class="text-xs bg-indigo-50 text-indigo-600 p-1.5 rounded-lg hover:bg-indigo-100" title="Google Maps"><i class="fa-solid fa-map-pin"></i></a>
+                                <a href="https://www.accuweather.com/en/search-locations?query=${encodeURIComponent(d.name)}" target="_blank" class="text-xs bg-amber-50 text-amber-600 p-1.5 rounded-lg hover:bg-amber-100" title="AccuWeather"><i class="fa-solid fa-sun"></i></a>
+                                <button onclick="deleteDestination('${d.id}')" class="text-xs bg-rose-50 text-rose-600 p-1.5 rounded-lg hover:bg-rose-100"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div id="weather-${d.id}" class="mt-3 bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs">
+                            <span class="text-slate-400">Loading forecast...</span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+                fetchWeather(d);
+            });
+        }
+
+        async function fetchWeather(dest) {
+            const container = document.getElementById(`weather-${dest.id}`);
+            if (!container) return;
+            try {
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${dest.lat}&longitude=${dest.lon}&current_weather=true`);
+                const data = await res.json();
+                if (data.current_weather) {
+                    const temp = data.current_weather.temperature;
+                    const wind = data.current_weather.windspeed;
+                    container.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-indigo-600 text-xs"><i class="fa-solid fa-temperature-half mr-1"></i>${temp}°C</span>
+                            <span class="text-slate-500 text-xs"><i class="fa-solid fa-wind mr-1"></i>${wind} km/h</span>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                container.innerHTML = `<span class="text-rose-500 text-xs">Weather unavailable</span>`;
+            }
+        }
+
+        function openAddDestinationModal() {
+            openModal("Add Destination", `
+                <div>
+                    <label class="block mb-1 font-medium">City / Place Name</label>
+                    <input type="text" id="m-dest-name" placeholder="e.g. Kyoto" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                </div>
+                <div>
+                    <label class="block mb-1 font-medium">Country</label>
+                    <input type="text" id="m-dest-country" placeholder="e.g. Japan" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block mb-1 font-medium">Latitude</label>
+                        <input type="number" step="any" id="m-dest-lat" placeholder="35.0116" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                    </div>
+                    <div>
+                        <label class="block mb-1 font-medium">Longitude</label>
+                        <input type="number" step="any" id="m-dest-lon" placeholder="135.7681" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                    </div>
+                </div>
+            `, () => {
+                const name = document.getElementById("m-dest-name").value;
+                const country = document.getElementById("m-dest-country").value;
+                const lat = parseFloat(document.getElementById("m-dest-lat").value) || 0;
+                const lon = parseFloat(document.getElementById("m-dest-lon").value) || 0;
+                if (!name) return;
+                appData.destinations.push({ id: "d_" + Date.now(), name, country, lat, lon, query: `${name}, ${country}` });
+                saveAppData();
+                renderDestinations();
+                closeModal();
+            });
+        }
+
+        function deleteDestination(id) {
+            appData.destinations = appData.destinations.filter(d => d.id !== id);
+            saveAppData();
+            renderDestinations();
+        }
+
+        function renderChecklists() {
+            const preContainer = document.getElementById("pre-holiday-tasks");
+            const depContainer = document.getElementById("departure-tasks");
+            if (!preContainer || !depContainer) return;
+
+            preContainer.innerHTML = "";
+            depContainer.innerHTML = "";
+
+            appData.checklists.forEach(item => {
+                const el = document.createElement("div");
+                el.className = "flex items-center justify-between bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs";
+                el.innerHTML = `
+                    <div class="flex items-center gap-2.5 flex-1">
+                        <input type="checkbox" ${item.done ? "checked" : ""} onchange="toggleChecklist('${item.id}')" class="rounded text-indigo-600 focus:ring-0 cursor-pointer">
+                        <div class="${item.done ? "line-through text-slate-400" : "text-slate-800"}">
+                            <span class="font-medium">${item.text}</span>
+                            ${item.remark ? `<span class="block text-[10px] text-slate-400">${item.remark}</span>` : ""}
+                        </div>
+                    </div>
+                    <button onclick="deleteChecklist('${item.id}')" class="text-rose-500 hover:text-rose-700 px-1"><i class="fa-solid fa-trash"></i></button>
+                `;
+                if (item.type === "pre") preContainer.appendChild(el);
+                else depContainer.appendChild(el);
+            });
+        }
+
+        function toggleChecklist(id) {
+            const item = appData.checklists.find(c => c.id === id);
+            if (item) item.done = !item.done;
+            saveAppData();
+            renderChecklists();
+        }
+
+        function deleteChecklist(id) {
+            appData.checklists = appData.checklists.filter(c => c.id !== id);
+            saveAppData();
+            renderChecklists();
+        }
+
+        function openAddTaskModal() {
+            openModal("Add Action Task", `
+                <div>
+                    <label class="block mb-1 font-medium">Checklist Category</label>
+                    <select id="m-chk-type" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                        <option value="pre">Pre-Holiday</option>
+                        <option value="dep">Day of Departure</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block mb-1 font-medium">Task Description</label>
+                    <input type="text" id="m-chk-text" placeholder="e.g. Submit Entry Form" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                </div>
+                <div>
+                    <label class="block mb-1 font-medium">Remark / Notes</label>
+                    <input type="text" id="m-chk-remark" placeholder="e.g. Confirmation ref #123" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                </div>
+            `, () => {
+                const type = document.getElementById("m-chk-type").value;
+                const text = document.getElementById("m-chk-text").value;
+                const remark = document.getElementById("m-chk-remark").value;
+                if (!text) return;
+                appData.checklists.push({ id: "c_" + Date.now(), type, text, remark, done: false });
+                saveAppData();
+                renderChecklists();
+                closeModal();
+            });
+        }
+
+        function renderTransport() {
+            const container = document.getElementById("transport-list");
+            if (!container) return;
+            container.innerHTML = "";
+            appData.transport.forEach(t => {
+                const card = document.createElement("div");
+                card.className = "bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs space-y-2";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center gap-2">
+                            <span class="bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded text-[10px]">${t.type}</span>
+                            <h3 class="font-bold text-sm text-slate-800">${t.carrier}</h3>
+                        </div>
+                        <button onclick="deleteTransport('${t.id}')" class="text-rose-500 hover:text-rose-700"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-600 pt-1">
+                        <div><span class="text-slate-400 block">From:</span> ${t.depStation} (${t.depTime || "N/A"})</div>
+                        <div><span class="text-slate-400 block">To:</span> ${t.arrStation} (${t.arrTime || "N/A"})</div>
+                        <div><span class="text-slate-400 block">Terminal / Gate:</span> ${t.terminal || "-"} / ${t.gate || "-"}</div>
+                        <div><span class="text-slate-400 block">Seat / Ref:</span> ${t.seat || "-"} / ${t.ref || "-"}</div>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-slate-500 border-t border-slate-200 pt-2">
+                        <div>Carry-on: <strong>${t.carryOn || "N/A"}</strong></div>
+                        <div>Checked: <strong>${t.checkedBag || "N/A"}</strong></div>
+                        <div>Transit/Remarks: <strong>${t.transit || "-"}</strong></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openAddTransportModal() {
+            openModal("Add Transport Segment", `
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block mb-1 font-medium">Type</label>
+                        <select id="m-tr-type" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                            <option value="Flight">Flight</option>
+                            <option value="Train">Train</option>
+                            <option value="Bus">Bus</option>
+                            <option value="Ferry">Ferry</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block mb-1 font-medium">Carrier / Vehicle</label>
+                        <input type="text" id="m-tr-carrier" placeholder="e.g. SQ638" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block mb-1 font-medium">Dep Station / Airport</label>
+                        <input type="text" id="m-tr-dep" placeholder="e.g. SIN" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                    </div>
+                    <div>
+                        <label class="block mb-1 font-medium">Arr Station / Airport</label>
+                        <input type="text" id="m-tr-arr" placeholder="e.g. NRT" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block mb-1 font-medium">Dep Time</label>
+                        <input type="datetime-local" id="m-tr-deptime" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                    </div>
+                    <div>
+                        <label class="block mb-1 font-medium">Arr Time</label>
+                        <input type="datetime-local" id="m-tr-arrtime" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div><label class="block mb-1 font-medium">Terminal</label><input type="text" id="m-tr-term" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                    <div><label class="block mb-1 font-medium">Gate</label><input type="text" id="m-tr-gate" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                    <div><label class="block mb-1 font-medium">Seat</label><input type="text" id="m-tr-seat" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div><label class="block mb-1 font-medium">Ref Code</label><input type="text" id="m-tr-ref" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                    <div><label class="block mb-1 font-medium">Carry-On</label><input type="text" id="m-tr-carry" placeholder="7kg" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                    <div><label class="block mb-1 font-medium">Checked</label><input type="text" id="m-tr-check" placeholder="25kg" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                </div>
+            `, () => {
+                const type = document.getElementById("m-tr-type").value;
+                const carrier = document.getElementById("m-tr-carrier").value;
+                if (!carrier) return;
+                appData.transport.push({
+                    id: "t_" + Date.now(),
+                    type,
+                    carrier,
+                    depStation: document.getElementById("m-tr-dep").value,
+                    arrStation: document.getElementById("m-tr-arr").value,
+                    depTime: document.getElementById("m-tr-deptime").value,
+                    arrTime: document.getElementById("m-tr-arrtime").value,
+                    terminal: document.getElementById("m-tr-term").value,
+                    gate: document.getElementById("m-tr-gate").value,
+                    seat: document.getElementById("m-tr-seat").value,
+                    ref: document.getElementById("m-tr-ref").value,
+                    carryOn: document.getElementById("m-tr-carry").value,
+                    checkedBag: document.getElementById("m-tr-check").value
+                });
+                saveAppData();
+                renderTransport();
+                closeModal();
+            });
+        }
+
+        function deleteTransport(id) {
+            appData.transport = appData.transport.filter(t => t.id !== id);
+            saveAppData();
+            renderTransport();
+        }
+
+        function renderStays() {
+            const container = document.getElementById("stays-list");
+            if (!container) return;
+            container.innerHTML = "";
+            appData.stays.forEach(s => {
+                const card = document.createElement("div");
+                card.className = "bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs flex flex-col justify-between space-y-2";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-bold text-sm text-slate-800">${s.name}</h3>
+                            <button onclick="deleteStay('${s.id}')" class="text-rose-500 hover:text-rose-700"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        <p class="text-slate-500 mt-1"><i class="fa-solid fa-calendar mr-1"></i>${s.checkIn} to ${s.checkOut}</p>
+                        <p class="text-slate-500"><i class="fa-solid fa-key mr-1"></i>Door Code: <strong class="text-slate-700">${s.doorCode || "N/A"}</strong></p>
+                        <p class="text-slate-500"><i class="fa-solid fa-bookmark mr-1"></i>Ref: <strong>${s.ref || "N/A"}</strong></p>
+                        <p class="text-slate-500 mt-1">${s.address}</p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-200 flex justify-between items-center">
+                        <span class="text-slate-400 italic">${s.remarks || ""}</span>
+                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name + ' ' + s.address)}" target="_blank" class="bg-indigo-600 text-white px-2.5 py-1 rounded-lg hover:bg-indigo-700 text-[11px] font-medium">
+                            <i class="fa-solid fa-map-location-dot mr-1"></i> Maps
+                        </a>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openAddStayModal() {
+            openModal("Add Accommodation", `
+                <div>
+                    <label class="block mb-1 font-medium">Hotel / Stay Name</label>
+                    <input type="text" id="m-stay-name" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block mb-1 font-medium">Check-In</label><input type="date" id="m-stay-in" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                    <div><label class="block mb-1 font-medium">Check-Out</label><input type="date" id="m-stay-out" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block mb-1 font-medium">Booking Ref</label><input type="text" id="m-stay-ref" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                    <div><label class="block mb-1 font-medium">Door/Access Code</label><input type="text" id="m-stay-code" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                </div>
+                <div>
+                    <label class="block mb-1 font-medium">Address</label>
+                    <input type="text" id="m-stay-addr" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                </div>
+                <div>
+                    <label class="block mb-1 font-medium">Remarks</label>
+                    <input type="text" id="m-stay-remarks" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                </div>
+            `, () => {
+                const name = document.getElementById("m-stay-name").value;
+                if (!name) return;
+                appData.stays.push({
+                    id: "s_" + Date.now(),
+                    name,
+                    checkIn: document.getElementById("m-stay-in").value,
+                    checkOut: document.getElementById("m-stay-out").value,
+                    ref: document.getElementById("m-stay-ref").value,
+                    doorCode: document.getElementById("m-stay-code").value,
+                    address: document.getElementById("m-stay-addr").value,
+                    remarks: document.getElementById("m-stay-remarks").value
+                });
+                saveAppData();
+                renderStays();
+                closeModal();
+            });
+        }
+
+        function deleteStay(id) {
+            appData.stays = appData.stays.filter(s => s.id !== id);
+            saveAppData();
+            renderStays();
+        }
+
+        // ENHANCED PACKING CHECKLIST LOGIC
+        let openPackingCategories = {};
+
+        function renderPacking() {
+            const container = document.getElementById("packing-categories-container");
+            if (!container) return;
+            container.innerHTML = "";
+
+            const searchQuery = (document.getElementById("packing-search-input")?.value || "").toLowerCase().trim();
+            const priorityFilter = document.getElementById("packing-priority-filter")?.value || "ALL";
+            const statusFilter = document.getElementById("packing-status-filter")?.value || "ALL";
+
+            // Overall Progress Stats
+            const totalItems = appData.packingItems.length;
+            const packedItems = appData.packingItems.filter(i => i.done).length;
+            const overallPct = totalItems > 0 ? Math.round((packedItems / totalItems) * 100) : 0;
+
+            const statsEl = document.getElementById("packing-progress-stats");
+            const barEl = document.getElementById("packing-progress-bar");
+            if (statsEl) statsEl.innerText = `${packedItems} / ${totalItems} Items Packed (${overallPct}%)`;
+            if (barEl) barEl.style.width = `${overallPct}%`;
+
+            appData.packingCategories.forEach(cat => {
+                let items = appData.packingItems.filter(i => i.category === cat);
+
+                // Apply Filters
+                if (searchQuery) {
+                    items = items.filter(i => i.name.toLowerCase().includes(searchQuery));
+                }
+                if (priorityFilter !== "ALL") {
+                    items = items.filter(i => i.priority === priorityFilter);
+                }
+                if (statusFilter === "UNPACKED") {
+                    items = items.filter(i => !i.done);
+                } else if (statusFilter === "PACKED") {
+                    items = items.filter(i => i.done);
+                }
+
+                // If searching/filtering and no items match in this category, skip empty category render
+                if ((searchQuery || priorityFilter !== "ALL" || statusFilter !== "ALL") && items.length === 0) {
+                    return;
+                }
+
+                const catPackedCount = items.filter(i => i.done).length;
+                const catTotalCount = items.length;
+                const catPct = catTotalCount > 0 ? Math.round((catPackedCount / catTotalCount) * 100) : 0;
+                const isOpen = openPackingCategories[cat] !== false;
+
+                const catEl = document.createElement("div");
+                catEl.className = "border rounded-xl bg-slate-50 overflow-hidden shadow-sm";
+                catEl.innerHTML = `
+                    <div class="bg-slate-100 p-3 flex justify-between items-center cursor-pointer select-none hover:bg-slate-200/70 transition" onclick="toggleCategoryOpen('${cat}')">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-slate-500 text-xs"></i>
+                            <h3 class="font-bold text-slate-800 text-xs sm:text-sm">${cat}</h3>
+                            <span class="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold">${catPackedCount}/${catTotalCount}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-16 sm:w-24 bg-slate-200 h-2 rounded-full overflow-hidden hidden sm:block">
+                                <div class="bg-emerald-500 h-full" style="width: ${catPct}%"></div>
+                            </div>
+                            <span class="text-[10px] font-bold text-slate-500">${catPct}%</span>
+                        </div>
+                    </div>
+                    ${isOpen ? `
+                        <div class="p-3 space-y-2 bg-white">
+                            ${items.length === 0 ? '<p class="text-xs text-slate-400 italic p-1">No items matching current filters.</p>' : ''}
+                            ${items.map(item => `
+                                <div class="flex items-center justify-between text-xs p-2 rounded-lg hover:bg-slate-50 border border-slate-100 transition">
+                                    <div class="flex items-center gap-2.5 flex-1 min-w-0">
+                                        <input type="checkbox" ${item.done ? "checked" : ""} onchange="togglePackingItem('${item.id}')" class="rounded text-indigo-600 focus:ring-0 cursor-pointer w-4 h-4">
+                                        <span class="${item.done ? "line-through text-slate-400" : "text-slate-800 font-medium"} truncate">${item.name}</span>
+                                        ${item.qty && item.qty > 1 ? `<span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">x${item.qty}</span>` : ''}
+                                        <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold ${item.priority === 'High' ? 'bg-rose-100 text-rose-700' : item.priority === 'Medium' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">${item.priority}</span>
+                                        ${item.season && item.season !== 'All' ? `<span class="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-medium">${item.season}</span>` : ''}
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <button onclick="changePackingQty('${item.id}', -1)" class="text-slate-400 hover:text-slate-700 px-1 font-bold text-xs">-</button>
+                                        <button onclick="changePackingQty('${item.id}', 1)" class="text-slate-400 hover:text-slate-700 px-1 font-bold text-xs">+</button>
+                                        <button onclick="deletePackingItem('${item.id}')" class="text-rose-500 hover:text-rose-700 ml-1"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                `;
+                container.appendChild(catEl);
+            });
+        }
+
+        function toggleCategoryOpen(cat) {
+            openPackingCategories[cat] = !(openPackingCategories[cat] !== false);
+            renderPacking();
+        }
+
+        function expandAllPacking(expand) {
+            appData.packingCategories.forEach(cat => openPackingCategories[cat] = expand);
+            renderPacking();
+        }
+
+        function togglePackingItem(id) {
+            const item = appData.packingItems.find(i => i.id === id);
+            if (item) item.done = !item.done;
+            saveAppData();
+            renderPacking();
+        }
+
+        function changePackingQty(id, delta) {
+            const item = appData.packingItems.find(i => i.id === id);
+            if (item) {
+                item.qty = Math.max(1, (item.qty || 1) + delta);
+                saveAppData();
+                renderPacking();
+            }
+        }
+
+        function deletePackingItem(id) {
+            appData.packingItems = appData.packingItems.filter(i => i.id !== id);
+            saveAppData();
+            renderPacking();
+        }
+
+        function openAddPackingItemModal() {
+            openModal("Add Packing Item", `
+                <div>
+                    <label class="block mb-1 font-medium">Category</label>
+                    <select id="m-pack-cat" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                        ${appData.packingCategories.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="block mb-1 font-medium">Item Name</label>
+                    <input type="text" id="m-pack-name" placeholder="e.g. Toothbrush" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block mb-1 font-medium">Quantity</label>
+                        <input type="number" id="m-pack-qty" value="1" min="1" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                    </div>
+                    <div>
+                        <label class="block mb-1 font-medium">Priority</label>
+                        <select id="m-pack-priority" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block mb-1 font-medium">Preset / Tag</label>
+                        <select id="m-pack-season" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                            <option value="All">All</option>
+                            <option value="Winter">Winter</option>
+                            <option value="Tropical">Tropical</option>
+                            <option value="Rainy">Rainy</option>
+                            <option value="Business">Business</option>
+                        </select>
+                    </div>
+                </div>
+            `, () => {
+                const name = document.getElementById("m-pack-name").value;
+                if (!name) return;
+                appData.packingItems.push({
+                    id: "p_" + Date.now(),
+                    category: document.getElementById("m-pack-cat").value,
+                    name,
+                    qty: parseInt(document.getElementById("m-pack-qty").value) || 1,
+                    priority: document.getElementById("m-pack-priority").value,
+                    season: document.getElementById("m-pack-season").value,
+                    done: false
+                });
+                saveAppData();
+                renderPacking();
+                closeModal();
+            });
+        }
+
+        function openManagePackingCategoriesModal() {
+            openModal("Manage Packing Categories", `
+                <div class="space-y-3">
+                    <div class="flex gap-2">
+                        <input type="text" id="m-new-pcat" placeholder="New Category Name" class="flex-1 border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                        <button onclick="addPackingCategory()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium">Add</button>
+                    </div>
+                    <div class="divide-y divide-slate-100 max-h-48 overflow-y-auto">
+                        ${appData.packingCategories.map(c => `
+                            <div class="flex justify-between items-center py-2">
+                                <span class="font-medium text-slate-700">${c}</span>
+                                <button onclick="promptDeletePackingCategory('${c}')" class="text-rose-600 hover:underline text-xs font-medium">Delete</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `, null, false);
+        }
+
+        function addPackingCategory() {
+            const val = document.getElementById("m-new-pcat").value.trim();
+            if (val && !appData.packingCategories.includes(val)) {
+                appData.packingCategories.push(val);
+                saveAppData();
+                renderPacking();
+                openManagePackingCategoriesModal();
+            }
+        }
+
+        function promptDeletePackingCategory(cat) {
+            showConfirmModal("Delete Category", `Are you sure you want to delete "${cat}"? All associated items will also be removed.`, () => {
+                appData.packingCategories = appData.packingCategories.filter(c => c !== cat);
+                appData.packingItems = appData.packingItems.filter(i => i.category !== cat);
+                saveAppData();
+                renderPacking();
+                openManagePackingCategoriesModal();
+            });
+        }
+
+        function applyPresetPrompt() {
+            openModal("Apply Seasonal & Special Presets", `
+                <p class="text-slate-600 mb-3">Select a preset to automatically append travel essentials to your packing list:</p>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <button onclick="applyPreset('Winter')" class="p-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 font-semibold text-center text-slate-700 hover:text-indigo-700 transition">❄️ Winter</button>
+                    <button onclick="applyPreset('Tropical')" class="p-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 font-semibold text-center text-slate-700 hover:text-indigo-700 transition">☀️ Tropical</button>
+                    <button onclick="applyPreset('Rainy')" class="p-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 font-semibold text-center text-slate-700 hover:text-indigo-700 transition">🌧️ Rainy</button>
+                    <button onclick="applyPreset('Business')" class="p-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 font-semibold text-center text-slate-700 hover:text-indigo-700 transition">💼 Business</button>
+                    <button onclick="applyPreset('Hiking')" class="p-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 font-semibold text-center text-slate-700 hover:text-indigo-700 transition">🥾 Outdoor</button>
+                </div>
+            `, null, false);
+        }
+
+        function applyPreset(type) {
+            const presets = {
+                Winter: [
+                    { cat: "Clothing", name: "Heavy Winter Thermal Jacket", priority: "High" },
+                    { cat: "Clothing", name: "Thermal Innerwear Layers", priority: "High" },
+                    { cat: "Clothing", name: "Warm Gloves, Scarf & Beanie", priority: "Medium" }
+                ],
+                Tropical: [
+                    { cat: "Toiletries & Meds", name: "Sunscreen SPF50+", priority: "High" },
+                    { cat: "Accessories & Gear", name: "UV Polarized Sunglasses", priority: "High" },
+                    { cat: "Clothing", name: "Swimwear & Beach Towel", priority: "Medium" }
+                ],
+                Rainy: [
+                    { cat: "Accessories & Gear", name: "Compact Windproof Umbrella", priority: "High" },
+                    { cat: "Clothing", name: "Waterproof Rain Jacket", priority: "High" }
+                ],
+                Business: [
+                    { cat: "Clothing", name: "Formal Suits / Blazer", priority: "High" },
+                    { cat: "Documents & Money", name: "Business Cards", priority: "High" },
+                    { cat: "Electronics", name: "Laptop & Charger", priority: "High" }
+                ],
+                Hiking: [
+                    { cat: "Accessories & Gear", name: "Hiking Boots & Trekking Poles", priority: "High" },
+                    { cat: "Toiletries & Meds", name: "Insect Repellent Spray", priority: "High" },
+                    { cat: "Accessories & Gear", name: "Hydration Flask / Water Bottle", priority: "High" }
+                ]
+            };
+
+            const itemsToAdd = presets[type] || [];
+            itemsToAdd.forEach(p => {
+                if (!appData.packingCategories.includes(p.cat)) {
+                    appData.packingCategories.push(p.cat);
+                }
+                appData.packingItems.push({
+                    id: "p_" + Date.now() + Math.random().toString().slice(2, 6),
+                    category: p.cat,
+                    name: p.name,
+                    qty: 1,
+                    priority: p.priority || "Medium",
+                    season: type,
+                    done: false
+                });
+            });
+
+            saveAppData();
+            renderPacking();
+            closeModal();
+            showAlertModal("Preset Applied", `Successfully appended ${itemsToAdd.length} ${type} travel items.`);
+        }
+
+        function renderExpenseCategoryOptions() {
+            const filterSel = document.getElementById("exp-filter-cat");
+            if (!filterSel) return;
+            filterSel.innerHTML = `<option value="ALL">All Categories</option>` + appData.expenseCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+
+        function renderExpenses() {
+            renderExpenseCategoryOptions();
+            const filterCatEl = document.getElementById("exp-filter-cat");
+            const filterDateEl = document.getElementById("exp-filter-date");
+            const tbody = document.getElementById("expense-table-body");
+            if (!tbody) return;
+
+            const filterCat = filterCatEl ? filterCatEl.value : "ALL";
+            const filterDate = filterDateEl ? filterDateEl.value : "";
+            tbody.innerHTML = "";
+
+            let filteredTotalBase = 0;
+
+            appData.expenses.forEach(e => {
+                if (filterCat !== "ALL" && e.category !== filterCat) return;
+                if (filterDate && e.date !== filterDate) return;
+
+                const baseAmt = convertToBase(e.amount, e.curr);
+                filteredTotalBase += baseAmt;
+
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-50";
+                tr.innerHTML = `
+                    <td class="p-2.5">${e.date}</td>
+                    <td class="p-2.5"><span class="bg-slate-100 px-2 py-0.5 rounded text-[10px] font-medium">${e.category}</span></td>
+                    <td class="p-2.5 font-medium text-slate-800">${e.desc}</td>
+                    <td class="p-2.5">${e.curr} ${e.amount.toFixed(2)}</td>
+                    <td class="p-2.5 font-bold text-indigo-600">${appData.profile.baseCurrency} ${baseAmt.toFixed(2)}</td>
+                    <td class="p-2.5 text-right">
+                        <button onclick="openEditExpenseModal('${e.id}')" class="text-indigo-600 hover:underline mr-2.5"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteExpense('${e.id}')" class="text-rose-600 hover:underline"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const totalEl = document.getElementById("filtered-expense-total");
+            if (totalEl) totalEl.innerText = `${appData.profile.baseCurrency} ${filteredTotalBase.toFixed(2)}`;
+            calculateBudgetProgress();
+        }
+
+        function clearExpenseFilters() {
+            const filterCat = document.getElementById("exp-filter-cat");
+            const filterDate = document.getElementById("exp-filter-date");
+            if (filterCat) filterCat.value = "ALL";
+            if (filterDate) filterDate.value = "";
+            renderExpenses();
+        }
+
+        function convertToBase(amount, curr) {
+            if (curr === appData.profile.baseCurrency) return amount;
+            const rate = appData.fxOverrides[curr] || appData.fxRates[curr] || 1;
+            return amount * rate;
+        }
+
+        function calculateBudgetProgress() {
+            let totalSpentBase = 0;
+            appData.expenses.forEach(e => {
+                totalSpentBase += convertToBase(e.amount, e.curr);
+            });
+
+            const overall = appData.profile.overallBudget || 0;
+            const pct = overall > 0 ? Math.min(100, (totalSpentBase / overall) * 100) : 0;
+            
+            const textEl = document.getElementById("budget-summary-text");
+            const barEl = document.getElementById("budget-bar");
+            if (textEl) textEl.innerText = `${appData.profile.baseCurrency} ${totalSpentBase.toFixed(2)} / ${appData.profile.baseCurrency} ${overall.toFixed(2)}`;
+            if (barEl) barEl.style.width = `${pct}%`;
+        }
+
+        function openAddExpenseModal() {
+            openModal("Log New Expense", `
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block mb-1 font-medium">Date</label><input type="date" id="m-exp-date" value="${new Date().toISOString().split('T')[0]}" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                    <div>
+                        <label class="block mb-1 font-medium">Category</label>
+                        <select id="m-exp-cat" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                            ${appData.expenseCategories.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div><label class="block mb-1 font-medium">Description</label><input type="text" id="m-exp-desc" placeholder="e.g. Lunch at Namba" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block mb-1 font-medium">Amount</label><input type="number" step="any" id="m-exp-amt" placeholder="1000" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                    <div>
+                        <label class="block mb-1 font-medium">Currency</label>
+                        <select id="m-exp-curr" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                            ${CURRENCIES.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            `, () => {
+                const desc = document.getElementById("m-exp-desc").value;
+                const amt = parseFloat(document.getElementById("m-exp-amt").value);
+                if (!desc || isNaN(amt)) return;
+                appData.expenses.push({
+                    id: "e_" + Date.now(),
+                    date: document.getElementById("m-exp-date").value,
+                    category: document.getElementById("m-exp-cat").value,
+                    desc,
+                    amount: amt,
+                    curr: document.getElementById("m-exp-curr").value
+                });
+                saveAppData();
+                renderExpenses();
+                closeModal();
+            });
+        }
+
+        function openEditExpenseModal(id) {
+            const exp = appData.expenses.find(e => e.id === id);
+            if (!exp) return;
+            openModal("Edit Expense", `
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block mb-1 font-medium">Date</label><input type="date" id="m-exp-date" value="${exp.date}" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                    <div>
+                        <label class="block mb-1 font-medium">Category</label>
+                        <select id="m-exp-cat" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                            ${appData.expenseCategories.map(c => `<option value="${c}" ${c === exp.category ? 'selected' : ''}>${c}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div><label class="block mb-1 font-medium">Description</label><input type="text" id="m-exp-desc" value="${exp.desc}" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block mb-1 font-medium">Amount</label><input type="number" step="any" id="m-exp-amt" value="${exp.amount}" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none"></div>
+                    <div>
+                        <label class="block mb-1 font-medium">Currency</label>
+                        <select id="m-exp-curr" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                            ${CURRENCIES.map(c => `<option value="${c}" ${c === exp.curr ? 'selected' : ''}>${c}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            `, () => {
+                exp.date = document.getElementById("m-exp-date").value;
+                exp.category = document.getElementById("m-exp-cat").value;
+                exp.desc = document.getElementById("m-exp-desc").value;
+                exp.amount = parseFloat(document.getElementById("m-exp-amt").value);
+                exp.curr = document.getElementById("m-exp-curr").value;
+                saveAppData();
+                renderExpenses();
+                closeModal();
+            });
+        }
+
+        function deleteExpense(id) {
+            appData.expenses = appData.expenses.filter(e => e.id !== id);
+            saveAppData();
+            renderExpenses();
+        }
+
+        function openManageExpenseCategoriesModal() {
+            openModal("Manage Expense Categories", `
+                <div class="space-y-3">
+                    <div class="flex gap-2">
+                        <input type="text" id="m-new-ecat" placeholder="New Category" class="flex-1 border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                        <button onclick="addExpenseCategory()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium">Add</button>
+                    </div>
+                    <div class="divide-y divide-slate-100 max-h-48 overflow-y-auto">
+                        ${appData.expenseCategories.map(c => `
+                            <div class="flex justify-between items-center py-2">
+                                <span>${c}</span>
+                                <button onclick="promptDeleteExpenseCategory('${c}')" class="text-rose-600 hover:underline text-xs font-medium">Delete</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `, null, false);
+        }
+
+        function addExpenseCategory() {
+            const val = document.getElementById("m-new-ecat").value.trim();
+            if (val && !appData.expenseCategories.includes(val)) {
+                appData.expenseCategories.push(val);
+                saveAppData();
+                renderExpenses();
+                openManageExpenseCategoriesModal();
+            }
+        }
+
+        function promptDeleteExpenseCategory(cat) {
+            showConfirmModal("Delete Category", `Are you sure you want to delete "${cat}" category?`, () => {
+                appData.expenseCategories = appData.expenseCategories.filter(c => c !== cat);
+                saveAppData();
+                renderExpenses();
+                openManageExpenseCategoriesModal();
+            });
+        }
+
+        async function fetchLiveRates() {
+            try {
+                const res = await fetch(`https://open.er-api.com/v6/latest/${appData.profile.baseCurrency}`);
+                const data = await res.json();
+                if (data && data.rates) {
+                    CURRENCIES.forEach(c => {
+                        if (data.rates[c]) {
+                            appData.fxRates[c] = 1 / data.rates[c];
+                        }
+                    });
+                    saveAppData();
+                    renderFXRates();
+                    renderCheatSheet();
+                    showAlertModal("Rates Updated", "Live foreign exchange conversion rates have been updated.");
+                }
+            } catch (e) {
+                showAlertModal("FX Error", "Unable to retrieve live rates from API. Check connection.");
+            }
+        }
+
+        function renderFXRates() {
+            const list = document.getElementById("fx-rates-list");
+            if (!list) return;
+            list.innerHTML = "";
+            CURRENCIES.forEach(c => {
+                if (c === appData.profile.baseCurrency) return;
+                const effectiveRate = appData.fxOverrides[c] || appData.fxRates[c] || 1;
+                const isOverride = !!appData.fxOverrides[c];
+
+                const div = document.createElement("div");
+                div.className = "flex items-center justify-between bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs";
+                div.innerHTML = `
+                    <div>
+                        <span class="font-bold text-slate-800">1 ${c} =</span>
+                        <span class="text-indigo-600 font-bold ml-1">${appData.profile.baseCurrency} ${effectiveRate.toFixed(4)}</span>
+                        ${isOverride ? `<span class="ml-2 text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-semibold">Manual Override</span>` : ''}
+                    </div>
+                    <button onclick="promptOverrideRate('${c}')" class="text-slate-600 hover:text-indigo-600"><i class="fa-solid fa-pen-to-square"></i></button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function promptOverrideRate(curr) {
+            const current = appData.fxOverrides[curr] || appData.fxRates[curr] || 1;
+            openModal(`Override FX Rate (${curr} to ${appData.profile.baseCurrency})`, `
+                <div>
+                    <label class="block mb-1 font-medium">Set Manual Conversion Rate</label>
+                    <input type="number" step="any" id="m-override-val" value="${current}" class="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 outline-none">
+                </div>
+            `, () => {
+                const val = parseFloat(document.getElementById("m-override-val").value);
+                if (!isNaN(val)) {
+                    appData.fxOverrides[curr] = val;
+                    saveAppData();
+                    renderFXRates();
+                    renderCheatSheet();
+                    renderExpenses();
+                    closeModal();
+                }
+            });
+        }
+
+        function renderCheatSheet() {
+            const targetCurrEl = document.getElementById("cs-target-curr");
+            const stepEl = document.getElementById("cs-step");
+            const table = document.getElementById("cheat-sheet-table");
+            if (!targetCurrEl || !table) return;
+
+            const targetCurr = targetCurrEl.value || "JPY";
+            const step = parseFloat(stepEl ? stepEl.value : 10) || 10;
+            const rate = appData.fxOverrides[targetCurr] || appData.fxRates[targetCurr] || 1;
+
+            let html = `
+                <table class="w-full text-xs">
+                    <thead class="bg-slate-100 font-semibold border-b border-slate-200">
+                        <tr>
+                            <th class="p-2.5 text-left">${targetCurr}</th>
+                            <th class="p-2.5 text-right">${appData.profile.baseCurrency}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+            `;
+
+            for (let i = 1; i <= 10; i++) {
+                const foreignAmt = step * i;
+                const baseAmt = foreignAmt * rate;
+                html += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-2.5 font-medium">${foreignAmt.toLocaleString()} ${targetCurr}</td>
+                        <td class="p-2.5 text-right font-bold text-indigo-600">${baseAmt.toFixed(2)} ${appData.profile.baseCurrency}</td>
+                    </tr>
+                `;
+            }
+
+            html += `</tbody></table>`;
+            table.innerHTML = html;
+        }
+
+        function openModal(title, bodyHtml, onSubmit, showSubmit = true) {
+            document.getElementById("modal-title").innerText = title;
+            document.getElementById("modal-body").innerHTML = bodyHtml;
+            const submitBtn = document.getElementById("modal-submit-btn");
+            submitBtn.innerText = "Save";
+            if (showSubmit) {
+                submitBtn.classList.remove("hidden");
+                submitBtn.onclick = onSubmit;
+            } else {
+                submitBtn.classList.add("hidden");
+            }
+            document.getElementById("app-modal").classList.remove("hidden");
+        }
+
+        function closeModal() {
+            document.getElementById("app-modal").classList.add("hidden");
+        }
+
+        function showAlertModal(title, message) {
+            openModal(title, `<p class="text-slate-700 text-xs">${message}</p>`, () => closeModal(), false);
+        }
+
+        function showConfirmModal(title, message, onConfirm) {
+            openModal(title, `<p class="text-slate-700 text-xs">${message}</p>`, () => {
+                onConfirm();
+                closeModal();
+            }, true);
+            document.getElementById("modal-submit-btn").innerText = "Confirm";
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `travel_companion_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+
+        function importData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const parsed = JSON.parse(evt.target.result);
+                    appData = parsed;
+                    saveAppData();
+                    initApp();
+                    showAlertModal("Import Successful", "Backup data has been successfully imported into your app!");
+                } catch (err) {
+                    showAlertModal("Import Error", "Failed to parse file. Ensure it is a valid JSON backup file.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function promptResetData() {
+            showConfirmModal("Reset Application Data", "Are you sure you want to reset all trip companion data back to default settings?", () => {
+                try {
+                    localStorage.removeItem("travel_companion_app_data");
+                } catch (e) {}
+                location.reload();
+            });
+        }
+
+        function initApp() {
+            try {
+                loadAppData();
+                initCurrencies();
+                renderTabs();
+                switchTab(appData.activeTab || "overview");
+
+                // Profile
+                if (document.getElementById("header-trip-title")) document.getElementById("header-trip-title").innerText = appData.profile.title;
+                if (document.getElementById("prof-title")) document.getElementById("prof-title").value = appData.profile.title;
+                if (document.getElementById("prof-dates")) document.getElementById("prof-dates").value = appData.profile.dates;
+                if (document.getElementById("prof-budget")) document.getElementById("prof-budget").value = appData.profile.overallBudget;
+
+                // Render Modules
+                renderDestinations();
+                renderChecklists();
+                renderTransport();
+                renderStays();
+                renderPacking();
+                renderExpenses();
+                renderFXRates();
+                renderCheatSheet();
+            } catch (err) {
+                console.error("App initialization error:", err);
+            }
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
